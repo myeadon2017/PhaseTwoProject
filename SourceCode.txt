@@ -1,0 +1,485 @@
+package com.dao;
+
+import com.model.Login;
+import com.model.Registration;
+
+//This interface is used for my User Registration functionality
+public interface UserDao {
+	
+	public void registration(Registration reg);
+
+}
+
+-------------------------------------------------------------------------
+
+package com.model;
+
+//This class is used for the login model
+public class Login {
+	
+	private String uname;
+	private String email;
+	public Login() {
+		super();
+		// TODO Auto-generated constructor stub
+	}
+	public Login(String uname, String email) {
+		super();
+		this.uname = uname;
+		this.email = email;
+	}
+	public String getUname() {
+		return uname;
+	}
+	public void setUname(String uname) {
+		this.uname = uname;
+	}
+	public String getEmail() {
+		return email;
+	}
+	public void setEmail(String email) {
+		this.email = email;
+	}
+
+}
+
+------------------------------------------------------------------------
+
+package com.model;
+
+import javax.persistence.Entity;
+import javax.persistence.Id;
+
+//This class is used for the registration model
+@Entity
+public class Registration {
+	
+	@Id
+	private String uname;
+	private String email;
+	private String city;
+	public Registration(String uname, String email, String city) {
+		super();
+		this.uname = uname;
+		this.email = email;
+		this.city = city;
+	}
+	public Registration() {
+		super();
+		// TODO Auto-generated constructor stub
+	}
+	public String getUname() {
+		return uname;
+	}
+	public void setUname(String uname) {
+		this.uname = uname;
+	}
+	public String getEmail() {
+		return email;
+	}
+	public void setEmail(String email) {
+		this.email = email;
+	}
+	public String getCity() {
+		return city;
+	}
+	public void setCity(String city) {
+		this.city = city;
+	}
+	
+
+}
+
+-----------------------------------------------------------------------
+
+package com.service;
+
+import org.hibernate.Transaction;
+import org.hibernate.Session;
+
+import com.dao.UserDao;
+import com.model.Registration;
+import com.utility.HibernateUtility;
+
+import jdk.internal.org.objectweb.asm.tree.MultiANewArrayInsnNode;
+
+//This class is used as a user service for implementing UserDao
+//This will use Hibernate to register the user
+public class UserService implements UserDao{
+
+
+	@Override
+	public void registration(Registration reg) {
+		System.out.println("inside service");
+
+		try {
+			
+			Session session= HibernateUtility.getSession();
+			Transaction tx= session.beginTransaction();
+			
+			session.save(reg);
+			tx.commit();
+
+			System.out.println(("user is registered"));
+			
+
+		} catch (Exception e) {
+			// TODO: handle exception
+		}
+
+	}
+
+}
+
+-----------------------------------------------
+
+package com.servlet;
+
+import java.io.IOException;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+
+import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+
+import com.service.UserService;
+
+//This servlet will be used to log the user in
+@WebServlet("/LoginServlet")
+public class LoginServlet extends HttpServlet {
+	private static final long serialVersionUID = 1L;
+
+	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+		
+		
+		
+		String searchname= request.getParameter("uname");
+		String searchemail= request.getParameter("email");
+		
+		//This query will be used to get the users info from the H2
+		String sql = "select empname, email from emp";
+		try{
+			Class.forName("org.h2.Driver");
+			Connection conn = DriverManager.getConnection("jdbc:h2:~/test", "sa", "");
+			
+			PreparedStatement pst = conn.prepareStatement(sql);
+			ResultSet rs = pst.executeQuery();
+			
+			boolean userFound = false;
+			
+			while(rs.next()){
+				String name = rs.getString(1);
+				String email = rs.getString(2);
+				
+				//This function will compare the two user inputs
+				//to validate the users login
+				if(searchname.equals(name) && searchemail.equals(email)){
+					response.getWriter().println("Login Successful");
+					userFound = true;
+					
+					HttpSession session= request.getSession();
+					
+					session.setAttribute("sesname", name);
+					
+					response.sendRedirect("loginsuccess.jsp");
+					
+					
+					break;
+				}
+			}
+			//This handles if the user enters invalid input
+			//message will be displayed at the console
+			if(!userFound){
+				response.getWriter().println("Username and email do not match");
+				
+			}
+		}catch(Exception e){
+		
+		
+		
+		
+		}
+		
+
+	}
+}
+
+-----------------------------------------------------------------------
+
+package com.servlet;
+
+import java.io.IOException;
+
+import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+
+//This servlet is used to log the user out
+@WebServlet("/Logout")
+public class Logout extends HttpServlet {
+	private static final long serialVersionUID = 1L;
+   
+	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+		
+		
+		HttpSession session=request.getSession(false);
+		session.invalidate();
+		response.sendRedirect("login.html");
+	}
+
+}
+
+-----------------------------------------------------------------------
+
+/*package com.servlet;
+import java.io.IOException;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+@WebServlet("/Registration")
+public class Registration extends HttpServlet {
+	private static final long serialVersionUID = 1L;
+	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+		String sql = "insert into emp(empname,email,city) values(?,?,?)";
+		Connection conn = null;
+		try {
+			Class.forName("org.h2.Driver");
+			conn = DriverManager.getConnection("jdbc:h2:~/test", "sa", "");
+			String name = request.getParameter("name");
+			String email = request.getParameter("email");
+			String city = request.getParameter("city");
+			System.out.println(name + " " + email + " " + city);
+			PreparedStatement pst = conn.prepareStatement(sql);
+			pst.setString(1, name);
+			pst.setString(2, email);
+			pst.setString(3, city);
+			int i = pst.executeUpdate();
+			if(i > 0) {
+				response.getWriter().println("User is registered");
+			}
+			conn.close();
+		} catch (Exception e) {
+			e.printStackTrace(); 
+		} //finally {
+			//try {
+				//conn.close();
+				//System.out.println("Connection is closed.");
+			//} catch (SQLException e) {
+				// TODO Auto-generated catch block
+				//e.printStackTrace();
+			//}
+			//System.out.println("Finally block called");
+		//}
+	}
+}*/
+package com.servlet;
+import java.io.IOException;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+
+import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+
+import com.service.UserService;
+
+//This servlet handles the user registration
+@WebServlet("/Registration")
+public class Registration extends HttpServlet {
+	private static final long serialVersionUID = 1L;
+	
+	
+	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+		UserService userService= new UserService();
+		System.out.println("inside servlet");
+		
+		com.model.Registration reg= new com.model.Registration(request.getParameter("uname"),request.getParameter("email"),request.getParameter("city"));
+		
+		userService.registration(reg);
+		
+		String name= request.getParameter("uname");
+		HttpSession session= request.getSession();
+		
+		session.setAttribute("sesname", name);
+		response.sendRedirect("registersuccess.jsp");
+	}
+	
+
+	
+}
+
+------------------------------------------------------------------------
+
+package com.utility;
+
+import org.hibernate.SessionFactory;
+import org.hibernate.cfg.AnnotationConfiguration;
+import org.hibernate.Session;
+
+//This class is the HibernateUtility used to host the session factory
+public class HibernateUtility {
+
+	
+	private static SessionFactory sf;
+	
+	static{
+		sf= new AnnotationConfiguration().configure().buildSessionFactory();
+		
+	}
+	public static Session getSession(){
+		
+		Session session= sf.openSession();
+		return session;
+	}
+}
+
+
+-----------------------------------------------------------------------
+
+<?xml version = "1.0" encoding = "utf-8"?>
+<!DOCTYPE hibernate-configuration SYSTEM 
+"http://www.hibernate.org/dtd/hibernate-configuration-3.0.dtd">
+<hibernate-configuration>
+   <session-factory>
+   
+      <property name = "hibernate.dialect">
+         org.hibernate.dialect.H2Dialect
+      </property>
+      
+      <property name = "hibernate.connection.driver_class">
+         org.h2.Driver
+      </property>
+      
+      <property name = "hibernate.hbm2ddl.auto">
+        update
+      </property>
+      
+      <!-- Assume test is the database name -->
+      
+      <property name = "hibernate.connection.url">
+         jdbc:h2:~/test
+      </property>
+      
+      <property name = "hibernate.connection.username">
+         sa
+      </property>
+      
+      <property name = "hibernate.connection.password">
+        
+      </property>
+      
+      <!-- List of XML mapping files -->
+      <mapping class = "com.model.Registration"/>
+      <mapping class = "com.model.Login"/>
+      
+   </session-factory>
+</hibernate-configuration>
+
+----------------------------------------------------------------------
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="ISO-8859-1">
+<title>Insert title here</title>
+</head>
+<body>
+
+<form method="post" action="loginsuccess.jsp">
+
+Name:<input type="text" name="uname">
+Email: <input type="text" name="email"><br/>
+
+
+
+
+<button type="submit">Login</button>
+
+</form>
+
+<br/>
+
+<a class="button" href="register.html">Register</a>
+</body>
+</html>
+
+-----------------------------------------------------------------------
+
+<%@ page language="java" contentType="text/html; charset=ISO-8859-1"
+    pageEncoding="ISO-8859-1"%>
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title>Insert title here</title>
+</head>
+<body>
+welcome <%= session.getAttribute("sesname") %>
+
+<br/>
+<a href="Logout">Logout</a>
+</body>
+</html>
+
+-----------------------------------------------------------------------
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Sign in</title>
+</head>
+<body>
+
+<form method="post" action="Registration">
+
+Name:<input type="text" name="uname">
+Email:<input type="text" name="email">
+City: <input type="text" name="city"><br/>
+
+<button type="submit">Register</button>
+
+</body>
+</html>
+
+------------------------------------------------------------------------
+
+<%@ page language="java" contentType="text/html; charset=ISO-8859-1"
+    pageEncoding="ISO-8859-1"%>
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title>Insert title here</title>
+</head>
+<body>
+You are now registered <%= session.getAttribute("sesname") %>
+
+<br/>
+<a href="register.html">Register</a>
+<a href="login.html">Login</a>
+</body>
+</html>
+
+
