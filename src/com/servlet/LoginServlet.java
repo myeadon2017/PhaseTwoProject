@@ -14,6 +14,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
+import com.model.Login;
 import com.service.UserService;
 
 //This servlet will be used to log the user in
@@ -23,55 +24,15 @@ public class LoginServlet extends HttpServlet {
 
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		
+		UserService userService= new UserService();
+		System.out.println("inside servlet");
+		Login log = new Login(request.getParameter("uname"), request.getParameter("email"));
 		
-		
-		String searchname= request.getParameter("uname");
-		String searchemail= request.getParameter("email");
-		
-		//This query will be used to get the users info from the H2
-		String sql = "select empname, email from emp";
-		try{
-			Class.forName("org.h2.Driver");
-			Connection conn = DriverManager.getConnection("jdbc:h2:~/test", "sa", "");
-			
-			PreparedStatement pst = conn.prepareStatement(sql);
-			ResultSet rs = pst.executeQuery();
-			
-			boolean userFound = false;
-			
-			while(rs.next()){
-				String name = rs.getString(1);
-				String email = rs.getString(2);
-				
-				//This function will compare the two user inputs
-				//to validate the users login
-				if(searchname.equals(name) && searchemail.equals(email)){
-					response.getWriter().println("Login Successful");
-					userFound = true;
-					
-					HttpSession session= request.getSession();
-					
-					session.setAttribute("sesname", name);
-					
-					response.sendRedirect("loginsuccess.jsp");
-					
-					
-					break;
-				}
-			}
-			//This handles if the user enters invalid input
-			//message will be displayed at the console
-			if(!userFound){
-				response.getWriter().println("Username and email do not match");
-				
-			}
-		}catch(Exception e){
-		
-		
-		
-		
-		}
-		
-
-	}
+		//This boolean "res" will hold the login validation result
+		boolean res = userService.login(log,request,response);
+		String name= request.getParameter("uname");
+		HttpSession session= request.getSession();
+		session.setAttribute("sesname", name);
+		response.sendRedirect("loginsuccess.jsp");
+}
 }

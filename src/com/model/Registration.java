@@ -7,6 +7,11 @@ import javax.persistence.Id;
 @Entity
 public class Registration {
 	
+	@Override
+	public String toString() {
+		return "Registration [uname=" + uname + ", email=" + email + ", city="
+				+ city + "]";
+	}
 	@Id
 	private String uname;
 	private String email;
